@@ -1,6 +1,5 @@
 streamlit==1.45.1
 groq==0.24.0
-langchain-community==0.3.24
-chromadb==0.5.23
 sentence-transformers==4.1.0
-protobuf==5.29.4
+scikit-learn==1.7.0
+numpy==2.3.0
