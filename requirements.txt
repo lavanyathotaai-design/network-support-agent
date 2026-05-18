@@ -1,8 +1,9 @@
-streamlit
-langchain
-langchain-community
-langchain-ollama
-chromadb
-pypdf
-langchain-text-splitters
-groq
+streamlit==1.45.1
+langchain==0.3.25
+langchain-community==0.3.24
+langchain-ollama==0.3.3
+langchain-text-splitters==0.3.8
+chromadb==0.5.23
+pypdf==5.5.0
+groq==0.24.0
+protobuf==5.29.4
