@@ -5,3 +5,4 @@ langchain-ollama
 chromadb
 pypdf
 langchain-text-splitters
+groq
