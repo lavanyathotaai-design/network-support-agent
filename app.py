@@ -43,26 +43,40 @@ def create_embeddings():
 
 doc_embeddings = create_embeddings()
 
-# Retrieve most relevant documents
+# Retrieve most relevant documents (uses latest query only for best RAG accuracy)
 def retrieve_docs(query, top_k=3):
     query_embedding = model.encode([query])
     similarities = cosine_similarity(query_embedding, doc_embeddings)[0]
     top_indices = similarities.argsort()[-top_k:][::-1]
     return [documents[i] for i in top_indices]
 
-query = st.text_input("Enter your question:")
+# ── STEP 1: Initialise session state (guard prevents reset on rerun) ──
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# ── STEP 2: Display full conversation history ──
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# ── STEP 3: Chat input box ──
+query = st.chat_input("Ask a question about DNS, SSL, HTTP errors...")
 
 if query:
+    # Show and store user message
+    with st.chat_message("user"):
+        st.markdown(query)
+    st.session_state.messages.append({"role": "user", "content": query})
+
     with st.spinner("Analyzing..."):
+        # Retrieve relevant docs based on latest query only
         relevant_docs = retrieve_docs(query)
         context = "\n\n".join(doc["content"] for doc in relevant_docs)
 
-        prompt = f"""
-You are a senior network support engineer.
-
+        # ── STEP 4: Build system prompt ──
+        system_prompt = f"""You are a senior network support engineer.
 Answer the user's question using the provided context.
-
-Provide the response in the following format:
+Always provide your response in this format:
 
 Problem Summary:
 Likely Root Cause:
@@ -70,24 +84,30 @@ Troubleshooting Steps:
 Recommended Next Action:
 
 Context:
-{context}
+{context}"""
 
-Question:
-{query}
-"""
+        # ── STEP 5: Include last 5 turns of conversation history ──
+        history = st.session_state.messages[-10:]  # last 5 user+assistant pairs
+        api_messages = [{"role": "system", "content": system_prompt}] + [
+            {"role": m["role"], "content": m["content"]}
+            for m in history
+        ]
 
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
+            messages=api_messages,
         )
 
         answer = response.choices[0].message.content
 
-        st.subheader("Response")
-        st.write(answer)
+    # Show and store assistant message
+    with st.chat_message("assistant"):
+        st.markdown(answer)
+    st.session_state.messages.append({"role": "assistant", "content": answer})
 
-        with st.expander("Relevant Knowledge Base Articles"):
-            for doc in relevant_docs:
-                st.markdown(f"### {doc['file']}")
-                st.markdown(doc["content"])
-                st.markdown("---")
+    # Show relevant knowledge base articles
+    with st.expander("📚 Relevant Knowledge Base Articles"):
+        for doc in relevant_docs:
+            st.markdown(f"### {doc['file']}")
+            st.markdown(doc["content"])
+            st.markdown("---")
